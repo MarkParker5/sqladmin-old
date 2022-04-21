@@ -28,6 +28,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import ClauseElement
+from sqlalchemy.orm.util import class_mapper
 from starlette.requests import Request
 from starlette.responses import StreamingResponse
 from wtforms import Field, Form
@@ -577,12 +578,32 @@ class ModelAdmin(BaseModelAdmin, metaclass=ModelAdminMeta):
         if isinstance(attr, Column):
             return getattr(obj, attr.name)
         else:
-            value = getattr(obj, attr.key)
-            if isinstance(value, list):
-                return ", ".join(map(str, value))
-            elif isinstance(value, Enum):
-                return value.value
-            return value
+            return self._stringify_value(getattr(obj, attr.key))
+
+    def _stringify_value(self, value) -> str:
+        if self._is_sql_model(value):
+            return self._get_relation_link(value)
+        elif isinstance(value, list):
+            items = map(self._stringify_value, value)
+            return ", ".join(items)
+        elif isinstance(value, Enum):
+            return value.value
+        return value
+
+    def _is_sql_model(self, model) -> bool:
+        try:
+            class_mapper(type(model))
+            return True
+        except:
+            return False
+
+    def _get_relation_link(self, model) -> str:
+        base_url = '/admin'
+        id = getattr(model, self.pk_column.name)
+        cls_name = type(model).__name__
+        model_slug = slugify_class_name(type(model).__name__)
+        url = f'{base_url}/{model_slug}/details/{id}'
+        return f'<a href="{url}">{model}</a>'
 
     def get_model_attr(
         self, attr: Union[str, InstrumentedAttribute]
