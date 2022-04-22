@@ -13,6 +13,8 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
+from .sidebar import SidebarLink
+
 if TYPE_CHECKING:
     from sqladmin.models import ModelAdmin
 
@@ -36,11 +38,13 @@ class BaseAdmin:
         base_url: str = "/admin",
         title: str = "Admin",
         logo_url: str = None,
+        links: list[SidebarLink] = [],
     ) -> None:
         self.app = app
         self.engine = engine
         self.base_url = base_url
         self._model_admins: List["ModelAdmin"] = []
+        self.links = links
 
         self.templates = Jinja2Templates("templates")
         self.templates.env.loader = ChoiceLoader(
@@ -53,6 +57,7 @@ class BaseAdmin:
         self.templates.env.globals["admin_title"] = title
         self.templates.env.globals["admin_logo_url"] = logo_url
         self.templates.env.globals["model_admins"] = self.model_admins
+        self.templates.env.globals["links"] = self.links
 
     @property
     def model_admins(self) -> List["ModelAdmin"]:
@@ -166,6 +171,7 @@ class Admin(BaseAdminView):
         logo_url: str = None,
         middlewares: Sequence[Middleware] = None,
         debug: bool = False,
+        links: list[SidebarLink] = [],
     ) -> None:
         """
         Args:
@@ -178,7 +184,7 @@ class Admin(BaseAdminView):
 
         assert isinstance(engine, (Engine, AsyncEngine))
         super().__init__(
-            app=app, engine=engine, base_url=base_url, title=title, logo_url=logo_url
+            app=app, engine=engine, base_url=base_url, title=title, logo_url=logo_url, links=links
         )
 
         statics = StaticFiles(packages=["sqladmin"])
