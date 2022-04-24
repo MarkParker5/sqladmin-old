@@ -108,7 +108,7 @@ class ModelConverterBase:
             assert len(prop.columns) == 1, "Multiple-column properties not supported"
             column = prop.columns[0]
 
-            if column.primary_key or column.foreign_keys:
+            if column.primary_key:
                 return
 
             default = getattr(column, "default", None)

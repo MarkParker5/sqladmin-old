@@ -63,12 +63,16 @@ input[type=checkbox] {
   background-color: #444;
 }
 
-input.form-control {
+input.form-control, select.form-control, select.form-control>option {
 	background-color: #444;
 	border: 1px solid #000;
 }
 
-input.form-control:focus {
+fieldset input.form-control:focus, select.form-control:focus {
 	background-color: #444;
 	border: 1px solid #999;
+}
+
+select.form-control>option {
+	font-size: 110%;
 }
