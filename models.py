@@ -73,7 +73,7 @@ class ModelAdminMeta(type):
                 f"Class {model.__name__} is not a SQLAlchemy model."
             )
 
-        assert len(mapper.primary_key) == 1, "Multiple PK columns not supported."
+        # assert len(mapper.primary_key) == 1, "Multiple PK columns not supported."
 
         cls.pk_column = mapper.primary_key[0]
         cls.identity = slugify_class_name(model.__name__)
@@ -466,6 +466,11 @@ class ModelAdmin(BaseModelAdmin, metaclass=ModelAdminMeta):
             for attr in self.column_sortable_list or []
         ]
 
+    def _get_pk(self, model) -> Any:
+        pk_column_name = inspect(type(model)).primary_key[0].name
+        pk_column_name = pk_column_name if hasattr(model, pk_column_name) else 'id'
+        return getattr(model, pk_column_name)
+
     def _run_query_sync(self, stmt: ClauseElement) -> Any:
         with self.sessionmaker(expire_on_commit=False) as session:
             result = session.execute(stmt)
@@ -499,6 +504,8 @@ class ModelAdmin(BaseModelAdmin, metaclass=ModelAdminMeta):
                 if name in relationships and isinstance(value, list):
                     # Load relationship objects into session
                     session.add_all(value)
+                elif name in relationships and self._get_pk(getattr(result, name)) == self._get_pk(value):
+                    continue
                 setattr(result, name, value)
 
     def _get_column_python_type(self, column: Column) -> type:
@@ -599,7 +606,7 @@ class ModelAdmin(BaseModelAdmin, metaclass=ModelAdminMeta):
 
     def _get_relation_link(self, model) -> str:
         base_url = '/admin'
-        id = getattr(model, self.pk_column.name)
+        id = self._get_pk(model)
         cls_name = type(model).__name__
         model_slug = slugify_class_name(type(model).__name__)
         url = f'{base_url}/{model_slug}/details/{id}'
@@ -660,7 +667,7 @@ class ModelAdmin(BaseModelAdmin, metaclass=ModelAdminMeta):
         return self._build_column_list(
             include=column_list,
             exclude=column_exclude_list,
-            default=lambda: [getattr(self.model, self.pk_column.name).prop],
+            default=lambda: [self._get_pk(self.model).prop],
         )
 
     def get_details_columns(self) -> List[Tuple[str, Column]]:
